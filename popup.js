@@ -106,14 +106,39 @@ document.addEventListener('DOMContentLoaded', function () {
         return evaluatePostfix(postfix);
     }
 
-    // 등호 버튼 클릭 이벤트 수정
-    equalButton.addEventListener('click', function () {
+    // 계산 결과를 표시하는 함수를 분리하여 재사용
+    function showCalculationResult(expression) {
         try {
-            // 수식 평가
-            display.value = calculate(display.value);
+            const result = calculate(expression);
+
+            // 이전에 표시된 계산식이 있다면 제거
+            const prevDisplays = document.querySelectorAll('.previous-display');
+            prevDisplays.forEach(el => el.remove());
+
+            // 새로운 계산식 표시
+            const previousDisplay = document.createElement('div');
+            previousDisplay.className = 'previous-display'; // 클래스 추가
+            previousDisplay.textContent = expression;
+            previousDisplay.style.position = 'absolute';
+            previousDisplay.style.fontSize = '1.3em';
+            previousDisplay.style.opacity = '0.7';
+            previousDisplay.style.color = '#666';
+            previousDisplay.style.left = '24px';
+            previousDisplay.style.top = '24px'; // display 상단에 위치하도록 수정
+
+            // display의 컨테이너에 추가
+            const calculatorDiv = document.querySelector('.calculator');
+            calculatorDiv.insertBefore(previousDisplay, display);
+
+            display.value = result;
         } catch (e) {
             display.value = 'Error';
         }
+    }
+
+    // 등호 버튼 클릭 이벤트 수정
+    equalButton.addEventListener('click', function () {
+        showCalculationResult(display.value);
     });
 
     // 키보드 입력 처리
@@ -155,16 +180,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // 엔터 키로 계산 수행
         if (key === 'Enter') {
-            try {
-                display.value = calculate(display.value);
-            } catch (e) {
-                display.value = 'Error';
-            }
+            showCalculationResult(display.value);
         }
 
-        // ESC 키로 입력 초기화
+        // Clear 버튼을 눌렀을 때 직전 계산식도 함께 초기화
         if (key === 'Escape') {
             display.value = '';
+            const prevDisplays = document.querySelectorAll('.previous-display');
+            prevDisplays.forEach(el => el.remove());
         }
+    });
+
+    // Clear 버튼 클릭 시 직전 계산식도 함께 초기화
+    clearButton.addEventListener('click', function () {
+        display.value = '';
+        const prevDisplays = document.querySelectorAll('.previous-display');
+        prevDisplays.forEach(el => el.remove());
     });
 });
