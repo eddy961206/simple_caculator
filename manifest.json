@@ -4,7 +4,10 @@
     "version": "1.0",
     "description": "A simple calculator extension for Chrome.",
     "action": {
-      "default_popup": "popup/popup.html"
+      "default_popup": "popup/popup.html",
+      "default_icon": {
+        "128": "assets/images/icon_128.png"
+      }
     },
     "permissions": []
   }
