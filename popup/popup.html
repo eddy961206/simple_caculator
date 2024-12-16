@@ -11,41 +11,47 @@
       <input type="checkbox" id="darkmode-toggle">
       <label for="darkmode-toggle">🌙</label>
     </div>
-    <div class="memory-status"></div>
-    <input type="text" id="display" readonly>
-    <div class="history-container">
-      <div class="history-list"></div>
-    </div>
-    <div class="buttons">
-      <button class="btn function" id="mc">MC</button>
-      <button class="btn function" id="mr">MR</button>
-      <button class="btn function" id="m-plus">M+</button>
-      <button class="btn function" id="m-minus">M-</button>
+    
+    <div class="calculator-container">
+      <div class="history-panel">
+        <div class="previous-calculation"></div>
+        <div class="history-list"></div>
+      </div>
+      
+      <div class="memory-status"></div>
+      <input type="text" id="display" readonly>
+      
+      <div class="buttons">
+        <button class="btn function" id="mc">MC</button>
+        <button class="btn function" id="mr">MR</button>
+        <button class="btn function" id="m-plus">M+</button>
+        <button class="btn function" id="m-minus">M-</button>
 
-      <button class="btn operator" data-value="(">(</button>
-      <button class="btn operator" data-value=")">)</button>
-      <button class="btn" id="clear">C</button>
-      <button class="btn operator" data-value="/">÷</button>
+        <button class="btn operator" data-value="(">(</button>
+        <button class="btn operator" data-value=")">)</button>
+        <button class="btn" id="clear">C</button>
+        <button class="btn operator" data-value="/">÷</button>
 
-      <button class="btn" data-value="7">7</button>
-      <button class="btn" data-value="8">8</button>
-      <button class="btn" data-value="9">9</button>
-      <button class="btn operator" data-value="*">×</button>
+        <button class="btn" data-value="7">7</button>
+        <button class="btn" data-value="8">8</button>
+        <button class="btn" data-value="9">9</button>
+        <button class="btn operator" data-value="*">×</button>
 
-      <button class="btn" data-value="4">4</button>
-      <button class="btn" data-value="5">5</button>
-      <button class="btn" data-value="6">6</button>
-      <button class="btn operator" data-value="-">−</button>
+        <button class="btn" data-value="4">4</button>
+        <button class="btn" data-value="5">5</button>
+        <button class="btn" data-value="6">6</button>
+        <button class="btn operator" data-value="-">−</button>
 
-      <button class="btn" data-value="1">1</button>
-      <button class="btn" data-value="2">2</button>
-      <button class="btn" data-value="3">3</button>
-      <button class="btn operator" data-value="+">+</button>
+        <button class="btn" data-value="1">1</button>
+        <button class="btn" data-value="2">2</button>
+        <button class="btn" data-value="3">3</button>
+        <button class="btn operator" data-value="+">+</button>
 
-      <button class="btn" data-value="0">0</button>
-      <button class="btn" data-value=".">.</button>
-      <button class="btn" id="backspace">⌫</button>
-      <button class="btn equal" id="equal">=</button>
+        <button class="btn" data-value="0">0</button>
+        <button class="btn" data-value=".">.</button>
+        <button class="btn" id="backspace">⌫</button>
+        <button class="btn equal" id="equal">=</button>
+      </div>
     </div>
   </div>
   <script src="/assets/scripts/popup.js"></script>

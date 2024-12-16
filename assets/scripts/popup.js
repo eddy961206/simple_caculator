@@ -6,15 +6,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const backspaceButton = document.getElementById('backspace');
     const darkmodeToggle = document.getElementById('darkmode-toggle');
     const memoryStatus = document.querySelector('.memory-status');
+    const previousCalculation = document.querySelector('.previous-calculation');
     const historyList = document.querySelector('.history-list');
 
     let memory = 0;
     let history = [];
-    const MAX_HISTORY = 5;
+    const MAX_HISTORY = 5; // 최대 5개의 기록만 유지
 
     // 다크모드 설정
     darkmodeToggle.addEventListener('change', function() {
         document.body.setAttribute('data-theme', this.checked ? 'dark' : 'light');
+        chrome.storage.sync.set({ darkMode: this.checked });
+    });
+
+    // 페이지 로드 시 다크모드 상태 복원
+    chrome.storage.sync.get(['darkMode'], function(result) {
+        const savedDarkMode = result.darkMode || false;
+        darkmodeToggle.checked = savedDarkMode;
+        document.body.setAttribute('data-theme', savedDarkMode ? 'dark' : 'light');
     });
 
     // 메모리 상태 업데이트
@@ -24,11 +33,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 히스토리 업데이트
     function updateHistory(expression, result) {
-        history.unshift(`${expression} = ${result}`);
-        if (history.length > MAX_HISTORY) {
-            history.pop();
+        // 직전 계산식 업데이트
+        previousCalculation.textContent = `${expression} =`;
+    
+        // 새로운 계산 기록 추가
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+            <span class="history-expression">${expression}</span>
+            <span class="history-result">${result}</span>
+        `;
+    
+        // 클릭 이벤트 추가
+        historyItem.addEventListener('click', () => {
+            display.value = result;
+        });
+    
+        // 이력 목록 맨 앞에 추가
+        historyList.insertBefore(historyItem, historyList.firstChild);
+    
+        // 최대 개수 유지
+        while (historyList.children.length > MAX_HISTORY) {
+            historyList.removeChild(historyList.lastChild);
         }
-        historyList.innerHTML = history.map(item => `<div>${item}</div>`).join('');
     }
 
     // 메모리 기능
@@ -70,7 +97,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     ['+', '*', '/'].includes(value)) {
                     return;
                 }
-                // 나머지 경우 정상 입력
                 display.value += value;
             }
         });
@@ -82,11 +108,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     clearButton.addEventListener('click', function () {
         display.value = '';
-        const prevDisplays = document.querySelectorAll('.previous-display');
-        prevDisplays.forEach(el => el.remove());
+        previousCalculation.textContent = '';
     });
 
-    // 계산 함수 개선
     function calculate(expression) {
         const operators = {
             '+': (a, b) => a + b,
@@ -178,24 +202,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // 이전 계산식 표시
-            const prevDisplays = document.querySelectorAll('.previous-display');
-            prevDisplays.forEach(el => el.remove());
-
-            const previousDisplay = document.createElement('div');
-            previousDisplay.className = 'previous-display';
-            previousDisplay.textContent = expression;
-            previousDisplay.style.position = 'absolute';
-            previousDisplay.style.fontSize = '1.3em';
-            previousDisplay.style.opacity = '0.7';
-            previousDisplay.style.color = 'var(--text-color)';
-            previousDisplay.style.left = '24px';
-            previousDisplay.style.top = '24px';
-
-            const calculatorDiv = document.querySelector('.calculator');
-            calculatorDiv.insertBefore(previousDisplay, display);
-
-            // 결과 표시 및 히스토리 업데이트
             display.value = result;
             updateHistory(expression, result);
         } catch (e) {
@@ -209,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // 키보드 입력 처리 개선
+    // 키보드 입력 처리
     document.addEventListener('keydown', function (event) {
         const key = event.key;
         const validKeys = /[\d+\-*/.()=]|Enter|Backspace|Escape/;
@@ -226,8 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
             display.value = display.value.slice(0, -1);
         } else if (key === 'Escape') {
             display.value = '';
-            const prevDisplays = document.querySelectorAll('.previous-display');
-            prevDisplays.forEach(el => el.remove());
+            previousCalculation.textContent = '';
         } else if (key === '=') {
             showCalculationResult(display.value);
         } else {
@@ -246,8 +251,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 ['+', '*', '/'].includes(key)) {
                 return;
             }
-            // 나머지 경우 정상 입력
             display.value += key;
         }
     });
+
+    // 초기 상태 설정
+    updateMemoryStatus();
 });
