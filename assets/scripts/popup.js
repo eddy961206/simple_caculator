@@ -57,6 +57,44 @@ $(document).ready(function() {
         while ($historyList.children().length > MAX_HISTORY) {
             $historyList.children().last().remove();
         }
+
+        // Chrome Storage에 계산 이력을 저장합니다.
+        saveHistoryToStorage();
+    }
+
+    // Chrome Storage에서 계산 이력을 불러오는 함수입니다.
+    function loadHistoryFromStorage() {
+        chrome.storage.sync.get(['history'], function(result) {
+            history = result.history || []; // 저장된 이력이 없으면 빈 배열을 사용합니다.
+            // 이력을 역순으로 불러와서 최신 이력이 위에 오도록 합니다.
+            for (let i = history.length - 1; i >= 0; i--) {
+                const item = history[i];
+                const $historyItem = $(`<div class="history-item">
+                    <span class="history-expression">${item.expression}</span>
+                    <span class="history-result">${item.result}</span>
+                </div>`);
+                $historyItem.on('click', () => {
+                    $display.val(item.result);
+                });
+                $historyList.append($historyItem); // 이력을 아래쪽에 추가합니다.
+            }
+        });
+    }
+
+    // Chrome Storage에 계산 이력을 저장하는 함수입니다.
+    function saveHistoryToStorage() {
+        // 현재 표시된 이력 항목들을 배열로 변환합니다.
+        const historyItems = $historyList.children().map(function() {
+            return {
+                expression: $(this).find('.history-expression').text(),
+                result: $(this).find('.history-result').text()
+            };
+        }).get();
+
+        // 최대 MAX_HISTORY 개수만큼만 저장합니다.
+        const savedHistory = historyItems.slice(0, MAX_HISTORY);
+
+        chrome.storage.sync.set({ history: savedHistory });
     }
 
     // 메모리 기능을 처리합니다.
@@ -111,6 +149,10 @@ $(document).ready(function() {
     $clearButton.on('click', () => {
         $display.val('');
         $previousCalculation.text('');
+
+        // 계산 이력을 초기화합니다.
+        $historyList.empty();
+        saveHistoryToStorage();
     });
 
     // 계산을 수행하는 함수입니다.
@@ -273,4 +315,6 @@ $(document).ready(function() {
 
     // 초기 상태를 설정합니다.
     updateMemoryStatus();
+    // 페이지 로드 시 계산 이력을 불러옵니다.
+    loadHistoryFromStorage();
 });
