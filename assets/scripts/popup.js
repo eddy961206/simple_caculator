@@ -3,198 +3,194 @@ document.addEventListener('DOMContentLoaded', function () {
     const buttons = document.querySelectorAll('.btn');
     const clearButton = document.getElementById('clear');
     const equalButton = document.getElementById('equal');
+    const backspaceButton = document.getElementById('backspace');
+    const darkmodeToggle = document.getElementById('darkmode-toggle');
+    const memoryStatus = document.querySelector('.memory-status');
+    const historyList = document.querySelector('.history-list');
+
+    let memory = 0;
+    let history = [];
+    const MAX_HISTORY = 5;
+
+    // 다크모드 설정
+    darkmodeToggle.addEventListener('change', function() {
+        document.body.setAttribute('data-theme', this.checked ? 'dark' : 'light');
+    });
+
+    // 메모리 상태 업데이트
+    function updateMemoryStatus() {
+        memoryStatus.textContent = memory !== 0 ? `M = ${memory}` : '';
+    }
+
+    // 히스토리 업데이트
+    function updateHistory(expression, result) {
+        history.unshift(`${expression} = ${result}`);
+        if (history.length > MAX_HISTORY) {
+            history.pop();
+        }
+        historyList.innerHTML = history.map(item => `<div>${item}</div>`).join('');
+    }
+
+    // 메모리 기능
+    document.getElementById('mc').addEventListener('click', () => {
+        memory = 0;
+        updateMemoryStatus();
+    });
+
+    document.getElementById('mr').addEventListener('click', () => {
+        display.value = memory;
+    });
+
+    document.getElementById('m-plus').addEventListener('click', () => {
+        memory += parseFloat(display.value) || 0;
+        updateMemoryStatus();
+    });
+
+    document.getElementById('m-minus').addEventListener('click', () => {
+        memory -= parseFloat(display.value) || 0;
+        updateMemoryStatus();
+    });
 
     buttons.forEach(function (button) {
         button.addEventListener('click', function () {
             const value = this.getAttribute('data-value');
             if (value) {
                 if (['+', '*', '/'].includes(value) && display.value === '') {
-                    return; // 첫 입력이 -만 허용하고, 나머지 연산자는 입력되지 않도록 함
+                    return;
                 }
-                // 마지막 입력이 연산자인지 확인
-                if (['+', '-', '*', '/'].includes(display.value.slice(-1)) && ['+', '-', '*', '/'].includes(value)) {
-                    return; // 연산자가 연속으로 입력되는 것을 방지
+                // 연산자 연속 입력 방지
+                if (['+', '-', '*', '/'].includes(display.value.slice(-1)) && 
+                    ['+', '-', '*', '/'].includes(value)) {
+                    return;
                 }
                 display.value += value;
             }
         });
     });
 
-    clearButton.addEventListener('click', function () {
-        display.value = '';
+    backspaceButton.addEventListener('click', function() {
+        display.value = display.value.slice(0, -1);
     });
 
-    // 계산 함수 정의
+    clearButton.addEventListener('click', function () {
+        display.value = '';
+        const prevDisplays = document.querySelectorAll('.previous-display');
+        prevDisplays.forEach(el => el.remove());
+    });
+
+    // 계산 함수 개선
     function calculate(expression) {
         const operators = {
             '+': (a, b) => a + b,
             '-': (a, b) => a - b,
             '*': (a, b) => a * b,
-            '/': (a, b) => a / b,
+            '/': (a, b) => b === 0 ? NaN : a / b,
         };
 
-        const precedence = {
-            '+': 1,
-            '-': 1,
-            '*': 2,
-            '/': 2,
-        };
+        try {
+            // 괄호 처리를 위한 정규식
+            while (expression.includes('(')) {
+                expression = expression.replace(/\(([^()]+)\)/g, (match, group) => {
+                    return calculate(group);
+                });
+            }
 
-        const isOperator = (c) => ['+', '-', '*', '/'].includes(c);
-        const isDigit = (c) => /\d/.test(c);
-
-        const toPostfix = (infix) => {
-            const output = [];
-            const opsStack = [];
-            let numberBuffer = '';
-            let lastChar = '';
-
-            for (let i = 0; i < infix.length; i++) {
-                const char = infix[i];
-
-                if (isDigit(char) || char === '.') {
-                    numberBuffer += char;
-                } else if (isOperator(char)) {
-                    if (char === '-' && (i === 0 || isOperator(lastChar))) {
-                        // 음수 처리: 수식의 시작이나 연산자 뒤에 오는 '-'는 음수로 간주
-                        numberBuffer += char;
-                    } else {
-                        if (numberBuffer) {
-                            output.push(parseFloat(numberBuffer));
-                            numberBuffer = '';
-                        }
-                        while (
-                            opsStack.length &&
-                            precedence[opsStack[opsStack.length - 1]] >= precedence[char]
-                        ) {
-                            output.push(opsStack.pop());
-                        }
-                        opsStack.push(char);
-                    }
+            const tokens = expression.match(/(-?\d*\.?\d+)|[+\-*/]/g) || [];
+            
+            // 곱셈과 나눗셈 먼저 처리
+            for (let i = 1; i < tokens.length - 1; i += 2) {
+                if (tokens[i] === '*' || tokens[i] === '/') {
+                    const result = operators[tokens[i]](
+                        parseFloat(tokens[i-1]),
+                        parseFloat(tokens[i+1])
+                    );
+                    tokens.splice(i-1, 3, result);
+                    i -= 2;
                 }
-                lastChar = char;
             }
 
-            if (numberBuffer) {
-                output.push(parseFloat(numberBuffer));
+            // 덧셈과 뺄셈 처리
+            let result = parseFloat(tokens[0]);
+            for (let i = 1; i < tokens.length; i += 2) {
+                result = operators[tokens[i]](result, parseFloat(tokens[i+1]));
             }
 
-            while (opsStack.length) {
-                output.push(opsStack.pop());
-            }
-
-            return output;
-        };
-
-        const evaluatePostfix = (postfix) => {
-            const stack = [];
-
-            postfix.forEach((token) => {
-                if (typeof token === 'number') {
-                    stack.push(token);
-                } else if (isOperator(token)) {
-                    const b = stack.pop();
-                    const a = stack.pop();
-                    stack.push(operators[token](a, b));
-                }
-            });
-
-            return stack[0];
-        };
-
-        const postfix = toPostfix(expression.replace(/\s+/g, ''));
-        return evaluatePostfix(postfix);
+            // 소수점 자릿수 제한 (최대 8자리)
+            return Number(result.toFixed(8));
+        } catch (e) {
+            return NaN;
+        }
     }
 
-    // 계산 결과를 표시하는 함수를 분리하여 재사용
     function showCalculationResult(expression) {
         try {
             const result = calculate(expression);
+            if (isNaN(result)) {
+                display.value = 'Error';
+                return;
+            }
 
-            // 이전에 표시된 계산식이 있다면 제거
+            // 이전 계산식 표시
             const prevDisplays = document.querySelectorAll('.previous-display');
             prevDisplays.forEach(el => el.remove());
 
-            // 새로운 계산식 표시
             const previousDisplay = document.createElement('div');
-            previousDisplay.className = 'previous-display'; // 클래스 추가
+            previousDisplay.className = 'previous-display';
             previousDisplay.textContent = expression;
             previousDisplay.style.position = 'absolute';
             previousDisplay.style.fontSize = '1.3em';
             previousDisplay.style.opacity = '0.7';
-            previousDisplay.style.color = '#666';
+            previousDisplay.style.color = 'var(--text-color)';
             previousDisplay.style.left = '24px';
-            previousDisplay.style.top = '24px'; // display 상단에 위치하도록 수정
+            previousDisplay.style.top = '24px';
 
-            // display의 컨테이너에 추가
             const calculatorDiv = document.querySelector('.calculator');
             calculatorDiv.insertBefore(previousDisplay, display);
 
+            // 결과 표시 및 히스토리 업데이트
             display.value = result;
+            updateHistory(expression, result);
         } catch (e) {
             display.value = 'Error';
         }
     }
 
-    // 등호 버튼 클릭 이벤트 수정
     equalButton.addEventListener('click', function () {
-        showCalculationResult(display.value);
-    });
-
-    // 키보드 입력 처리
-    document.addEventListener('keydown', function (event) {
-        const key = event.key;
-
-        // 숫자 입력 처리
-        if (/\d/.test(key)) {
-            display.value += key;
-        }
-
-        if (['+', '*', '/'].includes(key) && display.value === '') {
-            return; // 첫 입력이 -만 허용하고, 나머지 연산자는 입력되지 않도록 함
-        }
-
-        // 연산자 입력 처리
-        if (['+', '-', '*', '/'].includes(key)) {
-            // 마지막 입력이 연산자인지 확인
-            if (['+', '-', '*', '/'].includes(display.value.slice(-1))) {
-                return; // 연산자가 연속으로 입력되는 것을 방지
-            }
-            display.value += key;
-        }
-
-        // Shift + '=' for '+'
-        if (key === '=' && event.shiftKey) {
-            display.value += '+';
-        }
-
-        // Shift + '8' for '*'
-        if (key === '8' && event.shiftKey) {
-            display.value += '*';
-        }
-
-        // 백스페이스 처리
-        if (key === 'Backspace') {
-            display.value = display.value.slice(0, -1);
-        }
-
-        // 엔터 키로 계산 수행
-        if (key === 'Enter') {
+        if (display.value) {
             showCalculationResult(display.value);
         }
+    });
 
-        // Clear 버튼을 눌렀을 때 직전 계산식도 함께 초기화
-        if (key === 'Escape') {
+    // 키보드 입력 처리 개선
+    document.addEventListener('keydown', function (event) {
+        const key = event.key;
+        const validKeys = /[\d+\-*/.()=]|Enter|Backspace|Escape/;
+
+        if (!validKeys.test(key)) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (key === 'Enter') {
+            showCalculationResult(display.value);
+        } else if (key === 'Backspace') {
+            display.value = display.value.slice(0, -1);
+        } else if (key === 'Escape') {
             display.value = '';
             const prevDisplays = document.querySelectorAll('.previous-display');
             prevDisplays.forEach(el => el.remove());
+        } else if (key === '=') {
+            showCalculationResult(display.value);
+        } else {
+            if (['+', '*', '/'].includes(key) && display.value === '') {
+                return;
+            }
+            if (['+', '-', '*', '/'].includes(display.value.slice(-1)) && 
+                ['+', '-', '*', '/'].includes(key)) {
+                return;
+            }
+            display.value += key;
         }
-    });
-
-    // Clear 버튼 클릭 시 직전 계산식도 함께 초기화
-    clearButton.addEventListener('click', function () {
-        display.value = '';
-        const prevDisplays = document.querySelectorAll('.previous-display');
-        prevDisplays.forEach(el => el.remove());
     });
 });
