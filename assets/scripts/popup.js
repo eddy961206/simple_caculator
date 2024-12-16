@@ -55,14 +55,22 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             const value = this.getAttribute('data-value');
             if (value) {
-                if (['+', '*', '/'].includes(value) && display.value === '') {
+                // 첫 입력이 음수인 경우 허용
+                if (display.value === '' && value === '-') {
+                    display.value = '-';
                     return;
                 }
-                // 연산자 연속 입력 방지
-                if (['+', '-', '*', '/'].includes(display.value.slice(-1)) && 
-                    ['+', '-', '*', '/'].includes(value)) {
+                // 직전 입력이 '*' 또는 '/'이고, 현재 입력이 '-'인 경우 허용
+                if (['*', '/'].includes(display.value.slice(-1)) && value === '-') {
+                    display.value += value;
                     return;
                 }
+                // 연산자 연속 입력 방지 (단, '*' 또는 '/' 뒤에 '-'는 허용)
+                if (['+', '-', '*', '/'].includes(display.value.slice(-1)) &&
+                    ['+', '*', '/'].includes(value)) {
+                    return;
+                }
+                // 나머지 경우 정상 입력
                 display.value += value;
             }
         });
@@ -86,38 +94,78 @@ document.addEventListener('DOMContentLoaded', function () {
             '*': (a, b) => a * b,
             '/': (a, b) => b === 0 ? NaN : a / b,
         };
-
+    
         try {
-            // 괄호 처리를 위한 정규식
+            // 괄호 처리
             while (expression.includes('(')) {
                 expression = expression.replace(/\(([^()]+)\)/g, (match, group) => {
                     return calculate(group);
                 });
             }
-
-            const tokens = expression.match(/(-?\d*\.?\d+)|[+\-*/]/g) || [];
+    
+            // 연산자와 숫자를 분리
+            let tokens = [];
+            let currentNumber = '';
+            let isNegative = false;
+    
+            // 문자열을 순회하면서 토큰화
+            for (let i = 0; i < expression.length; i++) {
+                const char = expression[i];
+                
+                // 숫자나 소수점인 경우
+                if (/[\d.]/.test(char)) {
+                    currentNumber += char;
+                }
+                // 연산자인 경우
+                else if (/[\+\-\*\/]/.test(char)) {
+                    // 첫 문자가 마이너스이거나, 이전 문자가 연산자인 경우 (음수 처리)
+                    if (char === '-' && (i === 0 || /[\+\-\*\/]/.test(expression[i-1]))) {
+                        isNegative = true;
+                        continue;
+                    }
+                    
+                    // 현재까지의 숫자를 토큰에 추가
+                    if (currentNumber !== '') {
+                        tokens.push(isNegative ? -parseFloat(currentNumber) : parseFloat(currentNumber));
+                        currentNumber = '';
+                        isNegative = false;
+                    }
+                    tokens.push(char);
+                }
+            }
             
+            // 마지막 숫자 처리
+            if (currentNumber !== '') {
+                tokens.push(isNegative ? -parseFloat(currentNumber) : parseFloat(currentNumber));
+            }
+    
             // 곱셈과 나눗셈 먼저 처리
             for (let i = 1; i < tokens.length - 1; i += 2) {
                 if (tokens[i] === '*' || tokens[i] === '/') {
                     const result = operators[tokens[i]](
-                        parseFloat(tokens[i-1]),
-                        parseFloat(tokens[i+1])
+                        tokens[i-1],
+                        tokens[i+1]
                     );
                     tokens.splice(i-1, 3, result);
                     i -= 2;
                 }
             }
-
+    
             // 덧셈과 뺄셈 처리
-            let result = parseFloat(tokens[0]);
+            let result = tokens[0];
             for (let i = 1; i < tokens.length; i += 2) {
-                result = operators[tokens[i]](result, parseFloat(tokens[i+1]));
+                const operator = tokens[i];
+                const nextNum = tokens[i+1];
+                
+                if (operator === '+' || operator === '-') {
+                    result = operators[operator](result, nextNum);
+                }
             }
-
+    
             // 소수점 자릿수 제한 (최대 8자리)
             return Number(result.toFixed(8));
         } catch (e) {
+            console.error('Calculation error:', e);
             return NaN;
         }
     }
@@ -165,13 +213,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', function (event) {
         const key = event.key;
         const validKeys = /[\d+\-*/.()=]|Enter|Backspace|Escape/;
-
+    
         if (!validKeys.test(key)) {
             return;
         }
-
+    
         event.preventDefault();
-
+    
         if (key === 'Enter') {
             showCalculationResult(display.value);
         } else if (key === 'Backspace') {
@@ -183,13 +231,22 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (key === '=') {
             showCalculationResult(display.value);
         } else {
-            if (['+', '*', '/'].includes(key) && display.value === '') {
+            // 첫 입력이 음수인 경우 허용
+            if (display.value === '' && key === '-') {
+                display.value = '-';
                 return;
             }
-            if (['+', '-', '*', '/'].includes(display.value.slice(-1)) && 
-                ['+', '-', '*', '/'].includes(key)) {
+            // 직전 입력이 '*' 또는 '/'이고, 현재 입력이 '-'인 경우 허용
+            if (['*', '/'].includes(display.value.slice(-1)) && key === '-') {
+                display.value += key;
                 return;
             }
+            // 연산자 연속 입력 방지 (단, '*' 또는 '/' 뒤에 '-'는 허용)
+            if (['+', '-', '*', '/'].includes(display.value.slice(-1)) &&
+                ['+', '*', '/'].includes(key)) {
+                return;
+            }
+            // 나머지 경우 정상 입력
             display.value += key;
         }
     });
