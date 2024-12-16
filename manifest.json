@@ -6,8 +6,15 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "128": "assets/images/icon_128.png"
+      "16": "assets/images/icon16.png",
+      "48": "assets/images/icon48.png",
+      "128": "assets/images/icon128.png"
     }
+  },
+  "icons": {
+    "16": "assets/images/icon16.png",
+    "48": "assets/images/icon48.png",
+    "128": "assets/images/icon128.png"
   },
   "permissions": [
     "storage"
